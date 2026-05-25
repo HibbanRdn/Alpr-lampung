@@ -65,7 +65,7 @@ Aplikasi tidak memakai path Google Drive seperti `/content/drive/MyDrive/...`.
 
 ## Instalasi
 
-Disarankan memakai Python 3.12 dan virtual environment baru. Versi Python ini juga dipin untuk Streamlit Cloud melalui `runtime.txt`, karena `paddlepaddle==3.2.2` belum menyediakan wheel untuk Python 3.14.
+Disarankan memakai Python 3.12 dan virtual environment baru. `paddlepaddle==3.2.2` belum menyediakan wheel untuk Python 3.14, sehingga dependency ML/OCR di `requirements.txt` hanya akan diinstall otomatis pada Python `<3.13`.
 
 ```bash
 cd alpr-lampung
@@ -86,6 +86,27 @@ Setelah terbuka di browser:
 2. Pilih mode pipeline di sidebar.
 3. Klik **Run Inference**.
 4. Lihat hasil plat, wilayah, OCR mentah, visualisasi, dan detail teknis.
+
+## Deploy ke Streamlit Community Cloud
+
+PaddlePaddle perlu Python yang kompatibel. Jika log deploy menunjukkan:
+
+```text
+Using Python 3.14.5 environment
+paddlepaddle==3.2.2 has no wheels with a matching Python ABI
+```
+
+maka ubah versi Python langsung dari dashboard Streamlit Community Cloud:
+
+1. Buka app di Streamlit Community Cloud.
+2. Masuk ke **Manage app**.
+3. Buka **Settings** atau **Advanced settings**.
+4. Pilih Python version **3.12**.
+5. Simpan, lalu **Reboot** atau **Redeploy** app.
+
+File `runtime.txt` dan `.python-version` tetap disediakan untuk dokumentasi/runtime lain, tetapi pada Streamlit Community Cloud versi Python perlu dipilih dari pengaturan app.
+
+Jika Streamlit Cloud tetap menjalankan Python 3.14, aplikasi tetap bisa deploy dan terbuka, tetapi fitur inferensi Pipeline A/B akan menampilkan pesan bahwa PaddleOCR/YOLO belum tersedia. Untuk inferensi penuh, Python app harus diubah ke 3.12.
 
 ## Menaruh Model YOLO
 
