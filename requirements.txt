@@ -2,7 +2,7 @@ streamlit>=1.35
 ultralytics==8.4.53
 paddlepaddle==3.2.2
 paddleocr==3.4.1
-opencv-python>=4.9
+opencv-python-headless>=4.9
 pandas>=2.0
 numpy>=1.24
 Pillow>=10.0

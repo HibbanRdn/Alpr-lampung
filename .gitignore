@@ -10,6 +10,7 @@ env/
 
 # Model weights can be large. Put best.pt here locally, but avoid accidental commits.
 models/**/*.pt
+!models/yolov8n/weights/best.pt
 models/**/*.onnx
 models/**/*.torchscript
 

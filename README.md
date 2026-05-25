@@ -65,7 +65,7 @@ Aplikasi tidak memakai path Google Drive seperti `/content/drive/MyDrive/...`.
 
 ## Instalasi
 
-Disarankan memakai virtual environment baru.
+Disarankan memakai Python 3.12 dan virtual environment baru. Versi Python ini juga dipin untuk Streamlit Cloud melalui `runtime.txt`, karena `paddlepaddle==3.2.2` belum menyediakan wheel untuk Python 3.14.
 
 ```bash
 cd alpr-lampung
@@ -234,4 +234,3 @@ Jika repo akan dibuat public, pertimbangkan untuk menyamarkan sebagian plat pada
 ## Catatan Privasi
 
 Gambar plat kendaraan mengandung data sensitif. Hindari menyimpan, membagikan, atau mempublikasikan gambar kendaraan/plat tanpa izin. Folder `outputs/` masuk `.gitignore` agar file hasil upload/inference user tidak ikut ter-commit.
-
