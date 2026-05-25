@@ -1,0 +1,2 @@
+eval_split,main_roi_y_max_used,num_images,detection_success_rate,crop_success_rate,ocr_execution_success_rate,ocr_success_rate,candidate_success_rate,no_valid_candidate_count,plate_exact_match_accuracy,mean_CER,mean_character_accuracy,region_classification_accuracy,average_inference_time_ms,average_yolo_confidence,ocr_empty_count,ocr_error_count,multiple_detection_count,trailing_noise_removed_count,date_line_rejected_count,suspected_extra_text_noise_count,region_error_count
+test,0.65,12,1.0,1.0,1.0,1.0,1.0,0,1.0,0.0,1.0,1.0,6973.666403333329,0.950784295797348,0,0,1,2,0,2,0

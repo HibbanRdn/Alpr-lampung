@@ -1,0 +1,2 @@
+eval_split,num_images,ocr_execution_success_rate,ocr_empty_count,ocr_error_count,candidate_success_rate,no_valid_candidate_count,plate_exact_match_accuracy,mean_CER,mean_character_accuracy,region_classification_accuracy,average_inference_time_ms
+test,12,1.0,0,0,1.0,0,1.0,0.0,1.0,1.0,2815.6364536666565

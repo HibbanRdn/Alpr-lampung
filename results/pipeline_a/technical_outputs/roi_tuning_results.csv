@@ -1,0 +1,2 @@
+main_roi_y_max,num_images,plate_exact_match_accuracy,mean_CER,region_classification_accuracy,no_valid_candidate_count,average_inference_time_ms,notes
+0.65,0,,,,,,RUN_ROI_TUNING=False; default MAIN_ROI_Y_MAX digunakan.

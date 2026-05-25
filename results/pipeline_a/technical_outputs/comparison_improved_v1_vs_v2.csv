@@ -1,0 +1,3 @@
+method,exact_match,mean_CER,char_accuracy,region_accuracy,ocr_error_count,no_valid_candidate_count,notes
+improved_v1_roi_joined_candidate_scoring,0.833333,0.019676,0.980324,0.916667,0,0,Angka v1 dari hasil notebook sebelumnya. Candidate masih terlalu bias ke main_roi.
+improved_v2_line_source_candidate_scoring,1.0,0.0,1.0,1.0,0,0,"V2 memakai candidate OCR per line, agreement antar source, dan enhanced ROI hanya fallback."
