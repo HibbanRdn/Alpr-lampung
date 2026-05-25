@@ -1,7 +1,4 @@
 streamlit>=1.35
-ultralytics==8.4.53
-paddlepaddle==3.2.2
-paddleocr==3.4.1
 opencv-python-headless>=4.9
 pandas>=2.0
 numpy>=1.24
@@ -9,5 +6,13 @@ Pillow>=10.0
 matplotlib>=3.8
 rapidfuzz>=3.6
 pyyaml>=6.0
-langchain-text-splitters
-langchain-community
+
+# ML/OCR dependencies are only installable on Python versions supported by their wheels.
+# Streamlit Community Cloud may default to Python 3.14; these markers prevent deploy
+# from failing before the app starts. For full inference, set Streamlit Cloud Python
+# version to 3.12 so these packages are installed.
+ultralytics==8.4.53; python_version < "3.13"
+paddlepaddle==3.2.2; python_version < "3.13"
+paddleocr==3.4.1; python_version < "3.13"
+langchain-text-splitters; python_version < "3.13"
+langchain-community; python_version < "3.13"
