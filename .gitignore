@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.streamlit/secrets.toml
+*.log
+
+# Model weights can be large. Put best.pt here locally, but avoid accidental commits.
+models/**/*.pt
+models/**/*.onnx
+models/**/*.torchscript
+
+outputs/
+
+# dataset besar
+data/
+datasets/
+ALPR-Lampung-final/
+
+# file sistem
+.DS_Store
