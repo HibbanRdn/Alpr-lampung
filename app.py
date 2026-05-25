@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
 import time
 from pathlib import Path
 
@@ -24,7 +26,13 @@ st.set_page_config(
 
 @st.cache_resource(show_spinner="Memuat model YOLOv8...")
 def load_yolo_model():
-    from ultralytics import YOLO
+    try:
+        from ultralytics import YOLO
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "Ultralytics/YOLO belum terinstall di runtime ini. "
+            "Untuk memakai Pipeline A, gunakan Python 3.12 lalu install dependency ML dari requirements.txt."
+        ) from exc
 
     if not config.MODEL_PATH.exists():
         raise FileNotFoundError(
@@ -36,7 +44,14 @@ def load_yolo_model():
 
 @st.cache_resource(show_spinner="Memuat PaddleOCR...")
 def load_ocr_engine():
-    from paddleocr import PaddleOCR
+    try:
+        from paddleocr import PaddleOCR
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "PaddleOCR belum terinstall di runtime ini. "
+            "Streamlit Cloud yang berjalan di Python 3.14 tidak kompatibel dengan paddlepaddle==3.2.2. "
+            "Atur Python version ke 3.12 di Manage app > Settings agar Pipeline A/B dapat berjalan penuh."
+        ) from exc
 
     try:
         return PaddleOCR(**config.PADDLEOCR_KWARGS)
@@ -113,10 +128,22 @@ def display_pipeline_b(result: dict) -> None:
 
 
 def run_selected_pipeline(mode: str, image_bgr: np.ndarray, image_name: str) -> None:
-    ocr_engine = load_ocr_engine()
+    try:
+        ocr_engine = load_ocr_engine()
+    except RuntimeError as exc:
+        st.error(str(exc))
+        st.info(
+            "App berhasil deploy, tetapi fitur OCR membutuhkan PaddleOCR. "
+            "Jika ingin menjalankan inferensi penuh di Streamlit Cloud, ubah Python version app ke 3.12 lalu redeploy."
+        )
+        return
 
     if mode == "Pipeline A: YOLOv8 + PaddleOCR":
-        yolo_model = load_yolo_model()
+        try:
+            yolo_model = load_yolo_model()
+        except RuntimeError as exc:
+            st.error(str(exc))
+            return
         result_a = run_pipeline_a(image_bgr, yolo_model, ocr_engine, image_name=image_name)
         display_pipeline_a(result_a)
         return
@@ -126,7 +153,11 @@ def run_selected_pipeline(mode: str, image_bgr: np.ndarray, image_name: str) -> 
         display_pipeline_b(result_b)
         return
 
-    yolo_model = load_yolo_model()
+    try:
+        yolo_model = load_yolo_model()
+    except RuntimeError as exc:
+        st.error(str(exc))
+        return
     result_a = run_pipeline_a(image_bgr, yolo_model, ocr_engine, image_name=image_name)
     result_b = run_pipeline_b(image_bgr, ocr_engine, image_name=image_name)
 
@@ -164,6 +195,24 @@ st.write(
     "Aplikasi demo ini membaca plat kendaraan Lampung dengan dua mode: "
     "Pipeline A memakai YOLOv8 untuk mendeteksi plat terlebih dahulu, sedangkan Pipeline B menjalankan PaddleOCR langsung pada gambar penuh."
 )
+
+missing_runtime_notes = []
+if importlib.util.find_spec("paddleocr") is None:
+    missing_runtime_notes.append("PaddleOCR")
+if importlib.util.find_spec("ultralytics") is None:
+    missing_runtime_notes.append("Ultralytics/YOLO")
+if missing_runtime_notes:
+    st.warning(
+        "Runtime saat ini belum memuat dependency ML: "
+        + ", ".join(missing_runtime_notes)
+        + ". UI tetap bisa dibuka, tetapi inferensi penuh membutuhkan Python 3.12 di Streamlit Cloud."
+    )
+    with st.expander("Cara mengaktifkan inferensi penuh di Streamlit Cloud"):
+        st.write("1. Buka **Manage app** di Streamlit Community Cloud.")
+        st.write("2. Masuk ke **Settings** atau **Advanced settings**.")
+        st.write("3. Ubah **Python version** menjadi **3.12**.")
+        st.write("4. Klik **Reboot** atau **Redeploy**.")
+        st.caption(f"Python runtime saat ini: {sys.version.split()[0]}")
 
 with st.sidebar:
     st.header("Pengaturan")
