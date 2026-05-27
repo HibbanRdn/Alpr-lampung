@@ -1,34 +1,83 @@
-# ALPR Lampung Streamlit Dashboard
+# ALPR Lampung License Plate Detection
 
-Dashboard ini adalah aplikasi demo/inference untuk project **ALPR Lampung License Plate Detection**. Aplikasi menerima gambar kendaraan, lalu menjalankan salah satu pipeline:
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red)
+![YOLOv8](https://img.shields.io/badge/YOLOv8-Detection-green)
+![PaddleOCR](https://img.shields.io/badge/PaddleOCR-OCR-orange)
 
-1. **Pipeline A: YOLOv8 + PaddleOCR**  
-   YOLOv8 mendeteksi lokasi plat, aplikasi mengambil crop/ROI plat, PaddleOCR membaca teks, lalu kode belakang plat dipetakan ke wilayah Lampung.
+Repository ini berisi dashboard inference untuk project **ALPR Lampung License Plate Detection**. Aplikasi menerima gambar kendaraan, membaca plat nomor Lampung dengan prefix `BE`, lalu memetakan kode huruf belakang plat ke kabupaten/kota di Provinsi Lampung.
 
-2. **Pipeline B: Full Image PaddleOCR**  
-   PaddleOCR langsung membaca gambar penuh tanpa YOLO dan tanpa crop. Pipeline ini menjadi baseline pembanding Pipeline A.
+Project ini dibuat sebagai proof-of-concept akademik. Streamlit hanya menjalankan inference/demo, bukan training ulang model dan bukan sistem produksi.
 
-3. **Compare A vs B**  
-   Menjalankan kedua pipeline pada gambar yang sama dan menampilkan perbandingan hasil.
+- Demo: [https://alpr-lampung.streamlit.app/](https://alpr-lampung.streamlit.app/)
+- Repository: [https://github.com/HibbanRdn/Alpr-lampung.git](https://github.com/HibbanRdn/Alpr-lampung.git)
 
-Streamlit ini **hanya untuk inference/demo**. Tahap rename dataset, konversi polygon ke bbox, split dataset, training YOLO, serta evaluasi Pipeline A/B dilakukan di notebook sebelumnya. Urutan notebook dijelaskan di [docs/notebook_workflow.md](docs/notebook_workflow.md).
+## Fitur Utama
 
-## Struktur Folder
+- **Pipeline A: YOLOv8 + PaddleOCR**
+  YOLOv8 mendeteksi lokasi plat, sistem mengambil crop dan ROI teks utama, lalu PaddleOCR membaca teks plat.
+
+- **Pipeline B: Full Image PaddleOCR**
+  PaddleOCR langsung membaca seluruh gambar tanpa YOLO dan tanpa crop. Pipeline ini dipakai sebagai baseline pembanding.
+
+- **Compare A vs B**
+  Menjalankan dua pipeline pada gambar yang sama dan menampilkan perbandingan prediksi plat, wilayah, OCR mentah, dan waktu proses.
+
+- **Input manual plat**
+  User dapat mengetik plat seperti `BE 1193 ALQ` untuk mengecek kode wilayah dan nama wilayah.
+
+- **Visualisasi hasil prediksi**
+  Pipeline A menampilkan bbox YOLO, crop plat, dan ROI teks utama. Pipeline B menampilkan OCR line pada gambar penuh.
+
+## Preview Dashboard
+
+Pipeline A:
+
+![Preview Pipeline A](assets/screenshots/dashboard_pipeline-a.png)
+
+Pipeline B:
+
+![Preview Pipeline B](assets/screenshots/dashboard_pipeline-b.png)
+
+## Alur Pipeline
+
+Pipeline A:
+
+```mermaid
+flowchart LR
+    A["Gambar kendaraan"] --> B["YOLOv8 deteksi plat"]
+    B --> C["Crop dan ROI teks utama"]
+    C --> D["PaddleOCR"]
+    D --> E["Candidate extraction"]
+    E --> F["Mapping wilayah Lampung"]
+```
+
+Pipeline B:
+
+```mermaid
+flowchart LR
+    A["Gambar kendaraan penuh"] --> B["PaddleOCR full image"]
+    B --> C["Candidate extraction"]
+    C --> D["Mapping wilayah Lampung"]
+```
+
+## Struktur Repository
 
 ```text
 alpr-lampung/
 ├── app.py
 ├── requirements.txt
+├── runtime.txt
+├── packages.txt
 ├── README.md
-├── .gitignore
 ├── src/
 │   ├── __init__.py
+│   ├── config.py
+│   ├── ocr_utils.py
 │   ├── pipeline_a.py
 │   ├── pipeline_b.py
-│   ├── ocr_utils.py
 │   ├── region_mapper.py
-│   ├── visualization.py
-│   └── config.py
+│   └── visualization.py
 ├── models/
 │   └── yolov8n/
 │       └── weights/
@@ -51,207 +100,336 @@ alpr-lampung/
     └── notebook_workflow.md
 ```
 
-Semua path runtime di aplikasi memakai path relatif repo melalui `src/config.py`, misalnya:
+Keterangan singkat:
+
+| Path | Fungsi |
+|---|---|
+| `app.py` | Entry point Streamlit dashboard. |
+| `src/pipeline_a.py` | Inference YOLOv8, crop/ROI plat, OCR, dan mapping wilayah. |
+| `src/pipeline_b.py` | Inference PaddleOCR langsung pada full image. |
+| `src/ocr_utils.py` | Parsing output PaddleOCR, normalisasi teks, dan candidate scoring. |
+| `src/region_mapper.py` | Mapping kode huruf belakang plat Lampung ke wilayah. |
+| `src/visualization.py` | Helper visualisasi bbox YOLO dan OCR line. |
+| `src/config.py` | Konfigurasi path relatif repo, threshold YOLO, ROI, dan PaddleOCR. |
+| `models/` | Lokasi weight YOLOv8 final. |
+| `results/` | Artefak evaluasi dari notebook Pipeline A dan Pipeline B. |
+| `assets/sample_images/` | Beberapa gambar contoh untuk demo. |
+| `assets/screenshots/` | Screenshot dashboard atau visualisasi untuk dokumentasi. |
+| `outputs/` | Output sementara saat runtime Streamlit. Folder ini masuk `.gitignore`. |
+| `notebooks/` | Notebook eksperimen dari persiapan dataset sampai evaluasi pipeline. |
+| `docs/notebook_workflow.md` | Ringkasan urutan notebook dan output penting. |
+
+Aplikasi memakai path relatif dari repository. Tidak ada path runtime seperti `/content/drive/MyDrive/...` di Streamlit app.
+
+## Pipeline yang Tersedia
+
+### Pipeline A: YOLOv8 + PaddleOCR
+
+Pipeline A adalah pipeline utama. Alurnya:
+
+1. YOLOv8 mendeteksi area plat kendaraan.
+2. Sistem memilih bbox dengan confidence tertinggi.
+3. Area plat dipotong dengan padding kecil.
+4. ROI teks utama diambil agar OCR lebih fokus ke karakter plat, bukan tanggal masa berlaku atau noise kecil.
+5. PaddleOCR membaca teks dari crop/ROI.
+6. Candidate extraction memilih kandidat plat terbaik dengan pola:
+
+```text
+BE + 1 sampai 4 digit angka + 1 sampai 3 huruf belakang
+```
+
+Contoh kandidat yang didukung:
+
+```text
+BE1193ALQ
+BE8264FT
+BE1943FL
+BE1237FR
+```
+
+Pipeline ini membutuhkan model:
 
 ```text
 models/yolov8n/weights/best.pt
-results/pipeline_a
-results/pipeline_b
-assets/sample_images
-outputs
 ```
 
-Aplikasi tidak memakai path Google Drive seperti `/content/drive/MyDrive/...`.
+### Pipeline B: Full Image PaddleOCR
 
-## Instalasi
+Pipeline B tidak memakai YOLO dan tidak memakai crop plat. PaddleOCR langsung dijalankan pada gambar penuh. Candidate extraction kemudian memilih OCR line yang paling mirip dengan format plat Lampung.
 
-Disarankan memakai Python 3.12 dan virtual environment baru. `paddlepaddle==3.2.2` belum menyediakan wheel untuk Python 3.14, sehingga dependency ML/OCR di `requirements.txt` hanya akan diinstall otomatis pada Python `<3.13`.
+Pipeline B digunakan sebagai baseline pembanding untuk melihat apakah tahap deteksi YOLO pada Pipeline A membantu mengurangi noise OCR.
+
+### Compare A vs B
+
+Mode ini menjalankan Pipeline A dan Pipeline B pada gambar yang sama. Dashboard menampilkan tabel:
+
+```text
+Pipeline | Plat Prediksi | Wilayah | OCR Raw | Waktu Proses | Catatan
+```
+
+Mode ini berguna untuk melihat perbedaan hasil ketika OCR diarahkan ke crop plat dibandingkan OCR langsung dari gambar penuh.
+
+## Setup Model YOLO
+
+Pipeline A membutuhkan model YOLOv8n hasil training:
+
+```text
+models/yolov8n/weights/best.pt
+```
+
+Jika file `best.pt` belum ada:
+
+- Mode **Pipeline A** tidak dapat berjalan.
+- Mode **Compare A vs B** tidak dapat berjalan penuh.
+- Mode **Pipeline B** tetap dapat berjalan karena tidak memakai YOLO.
+
+Jika weight model terlalu besar untuk GitHub, simpan model di Google Drive atau Hugging Face, lalu letakkan manual ke:
+
+```text
+models/yolov8n/weights/best.pt
+```
+
+Repository ini juga dapat menyimpan `last.pt` untuk arsip eksperimen, tetapi aplikasi Streamlit memakai `best.pt`.
+
+## Instalasi Lokal
+
+Disarankan menggunakan **Python 3.12**. PaddlePaddle/PaddleOCR dapat bermasalah pada Python yang terlalu baru, misalnya Python 3.14.
+
+Clone repository:
 
 ```bash
-cd alpr-lampung
+git clone https://github.com/HibbanRdn/Alpr-lampung.git
+cd Alpr-lampung
+```
+
+Buat virtual environment:
+
+```bash
 python -m venv .venv
 source .venv/bin/activate
+```
+
+Untuk Windows:
+
+```bash
+.venv\Scripts\activate
+```
+
+Install dependency:
+
+```bash
 pip install -r requirements.txt
 ```
 
-## Menjalankan Aplikasi
+Jalankan aplikasi:
 
 ```bash
 streamlit run app.py
 ```
 
-Setelah terbuka di browser:
+## Dependency dan Runtime
 
-1. Upload gambar kendaraan.
-2. Pilih mode pipeline di sidebar.
-3. Klik **Run Inference**.
-4. Lihat hasil plat, wilayah, OCR mentah, visualisasi, dan detail teknis.
+File penting:
 
-## Deploy ke Streamlit Community Cloud
-
-PaddlePaddle perlu Python yang kompatibel. Jika log deploy menunjukkan:
+- `runtime.txt` berisi `python-3.12` untuk deployment.
+- `.python-version` berisi `3.12` untuk tooling lokal yang mendukung pyenv/asdf.
+- `packages.txt` berisi dependency sistem untuk OpenCV/PaddleOCR di Streamlit Cloud:
 
 ```text
-Using Python 3.14.5 environment
-paddlepaddle==3.2.2 has no wheels with a matching Python ABI
+libgomp1
+libgl1
+libglib2.0-0t64
 ```
 
-maka ubah versi Python langsung dari dashboard Streamlit Community Cloud:
-
-1. Buka app di Streamlit Community Cloud.
-2. Masuk ke **Manage app**.
-3. Buka **Settings** atau **Advanced settings**.
-4. Pilih Python version **3.12**.
-5. Simpan, lalu **Reboot** atau **Redeploy** app.
-
-File `runtime.txt` dan `.python-version` tetap disediakan untuk dokumentasi/runtime lain, tetapi pada Streamlit Community Cloud versi Python perlu dipilih dari pengaturan app.
-
-Jika Streamlit Cloud tetap menjalankan Python 3.14, aplikasi tetap bisa deploy dan terbuka, tetapi fitur inferensi Pipeline A/B akan menampilkan pesan bahwa PaddleOCR/YOLO belum tersedia. Untuk inferensi penuh, Python app harus diubah ke 3.12.
-
-## Menaruh Model YOLO
-
-File model final dari Google Drive:
+`requirements.txt` memakai marker Python untuk dependency ML/OCR. Tujuannya agar Streamlit Cloud tidak gagal total jika runtime default terlalu baru. Untuk inference penuh, gunakan Python 3.12 agar paket berikut ikut terinstall:
 
 ```text
-/content/drive/MyDrive/ALPR-Lampung-final/models/yolov8n/weights/best.pt
+ultralytics
+paddlepaddle
+paddleocr
 ```
 
-Salin ke repo:
+## Cara Menggunakan Dashboard
+
+1. Jalankan aplikasi dengan `streamlit run app.py`.
+2. Upload gambar kendaraan berformat JPG, JPEG, atau PNG.
+3. Pilih mode inferensi di sidebar:
+   - `Pipeline A: YOLOv8 + PaddleOCR`
+   - `Pipeline B: Full Image PaddleOCR`
+   - `Compare A vs B`
+4. Klik tombol **Run Inference**.
+5. Baca hasil prediksi plat, wilayah, OCR mentah, dan waktu proses.
+6. Jika ingin mengecek mapping wilayah tanpa upload gambar, gunakan input manual di sidebar.
+
+Output utama yang ditampilkan:
+
+| Label UI | Arti |
+|---|---|
+| Plat Terdeteksi | Hasil akhir plat setelah OCR dan candidate extraction. |
+| Kode Wilayah | Huruf pertama setelah angka plat yang dipakai untuk mapping wilayah. |
+| Wilayah Prediksi | Kabupaten/kota Lampung hasil mapping. |
+| Waktu Proses | Lama proses inference untuk gambar tersebut. |
+| Teks OCR Mentah | Teks asli yang dibaca PaddleOCR sebelum dipilih kandidat terbaik. |
+| Confidence Deteksi YOLO | Confidence bbox plat dari YOLOv8 pada Pipeline A. |
+| Detail Teknis | Candidate score, OCR line terpilih, bbox, dan status pipeline. |
+
+## Mapping Wilayah Lampung
+
+Mapping dilakukan dari huruf pertama setelah angka utama plat. Contoh:
 
 ```text
-models/yolov8n/weights/best.pt
+BE 1193 ALQ -> kode wilayah A -> Kota Bandar Lampung
+BE 1943 FL  -> kode wilayah F -> Kota Metro
+BE 1498 GP  -> kode wilayah G -> Kab. Lampung Tengah
 ```
 
-Jika `best.pt` terlalu besar untuk GitHub, jangan commit file tersebut. Simpan model di Google Drive/Hugging Face, lalu tulis instruksi agar user menaruhnya secara manual ke `models/yolov8n/weights/best.pt`.
+Ringkasan mapping:
 
-Jika file `best.pt` belum ada, mode **Pipeline A** dan **Compare A vs B** tidak bisa dijalankan. Mode **Pipeline B** tetap bisa berjalan karena tidak memakai YOLO.
+| Kode | Wilayah |
+|---|---|
+| A, B, C, Y | Kota Bandar Lampung |
+| F | Kota Metro |
+| D, E, O | Kab. Lampung Selatan |
+| M | Kab. Lampung Barat |
+| G, H, I | Kab. Lampung Tengah |
+| R | Kab. Pesawaran |
+| U | Kab. Pringsewu |
+| X | Kab. Pesisir Barat |
+| N, P | Kab. Lampung Timur |
+| J, K | Kab. Lampung Utara |
+| V, Z | Kab. Tanggamus |
+| W | Kab. Way Kanan |
+| S, T | Kab. Tulang Bawang |
+| Q | Kab. Tulang Bawang Barat |
+| L | Kab. Mesuji |
 
-## Artefak Hasil Notebook
+## Hasil Evaluasi
 
-Folder `results/` menyimpan ringkasan evaluasi final dari notebook Pipeline A dan Pipeline B. File ini tidak wajib untuk inference satu gambar, tetapi berguna untuk dokumentasi dashboard, laporan, dan perbandingan eksperimen.
-
-### Pipeline A
-
-Salin dari:
-
-```text
-/content/drive/MyDrive/ALPR-Lampung-results/pipeline_a/
-```
-
-Ke:
-
-```text
-results/pipeline_a/
-```
-
-File ramah pembaca yang disarankan:
-
-```text
-hasil_pipeline_a.csv
-ringkasan_evaluasi_pipeline_a.csv
-analisis_kesalahan_pipeline_a.csv
-perbandingan_sebelum_sesudah.csv
-dashboard_ringkas_pipeline_a.csv
-```
-
-Salin juga isi:
-
-```text
-/content/drive/MyDrive/ALPR-Lampung-results/pipeline_a/technical_outputs/
-```
-
-Ke:
+Evaluasi batch dilakukan di notebook, bukan di Streamlit dashboard. File hasil yang tersedia di repository ini berada di:
 
 ```text
 results/pipeline_a/technical_outputs/
-```
-
-File teknis yang disarankan:
-
-```text
-ocr_results_improved_v2.csv
-evaluation_summary_improved_v2.json
-evaluation_summary_improved_v2.csv
-candidate_debug_v2.csv
-error_analysis_improved_v2.csv
-comparison_improved_v1_vs_v2.csv
-```
-
-### Pipeline B
-
-Salin dari:
-
-```text
-/content/drive/MyDrive/ALPR-Lampung-results/pipeline_b/
-```
-
-Ke:
-
-```text
-results/pipeline_b/
-```
-
-File ramah pembaca yang disarankan:
-
-```text
-hasil_pipeline_b.csv
-ringkasan_evaluasi_pipeline_b.csv
-analisis_kesalahan_pipeline_b.csv
-dashboard_ringkas_pipeline_b.csv
-perbandingan_pipeline_a_vs_b.csv
-```
-
-Salin juga isi:
-
-```text
-/content/drive/MyDrive/ALPR-Lampung-results/pipeline_b/technical_outputs/
-```
-
-Ke:
-
-```text
 results/pipeline_b/technical_outputs/
 ```
 
-File teknis yang disarankan:
+Ringkasan dari file evaluasi saat ini:
+
+| Metrik | Pipeline A: YOLOv8 + OCR | Pipeline B: Full Image OCR |
+|---|---:|---:|
+| Split evaluasi | test | test |
+| Jumlah gambar | 12 | 12 |
+| Keberhasilan deteksi plat | 100% | Tidak berlaku |
+| Keberhasilan crop plat | 100% | Tidak berlaku |
+| Keberhasilan OCR | 100% | 100% |
+| Kandidat plat ditemukan | 100% | 100% |
+| Akurasi teks plat persis | 100% | 100% |
+| Rata-rata CER | 0.000 | 0.000 |
+| Akurasi karakter | 100% | 100% |
+| Akurasi wilayah | 100% | 100% |
+| Rata-rata waktu proses | 6.97 detik/gambar | 2.82 detik/gambar |
+
+Catatan penting:
+
+- Angka di atas berasal dari test set kecil berisi 12 gambar.
+- Hasil tidak boleh dibaca sebagai jaminan performa pada semua kondisi.
+- Kondisi pencahayaan, blur, sudut kamera, ukuran plat, dan background ramai dapat menurunkan performa OCR.
+- Pipeline B terlihat kompetitif pada test set ini, tetapi konsepnya tetap lebih rentan membaca teks non-plat karena tidak memakai deteksi area plat.
+
+File evaluasi utama:
 
 ```text
-ocr_results_pipeline_b.csv
-evaluation_summary_pipeline_b.json
-candidate_debug_pipeline_b.csv
-error_analysis_pipeline_b.csv
+results/pipeline_a/technical_outputs/evaluation_summary_improved_v2.json
+results/pipeline_a/technical_outputs/ocr_results_improved_v2.csv
+results/pipeline_a/technical_outputs/candidate_debug_v2.csv
+results/pipeline_b/technical_outputs/evaluation_summary_pipeline_b.json
+results/pipeline_b/technical_outputs/ocr_results_pipeline_b.csv
+results/pipeline_b/technical_outputs/candidate_debug_pipeline_b.csv
 ```
 
-## Sample Image dan Screenshot
-
-Untuk demo, salin beberapa gambar saja dari:
+Jika file ringkasan ramah pembaca dari Colab ingin ditambahkan, letakkan di:
 
 ```text
-/content/drive/MyDrive/ALPR-Lampung-final/test/images/
+results/pipeline_a/
+results/pipeline_b/
 ```
 
-Ke:
+## Alur Eksperimen Notebook
+
+Dashboard ini adalah tahap akhir deployment/demo. Tahap eksperimen dilakukan dalam notebook terpisah:
+
+1. Rename dataset.
+2. Ground truth manual.
+3. Roboflow annotation.
+4. Polygon to bbox conversion.
+5. Final split dataset.
+6. YOLOv8 training.
+7. Pipeline A evaluation.
+8. Pipeline B evaluation.
+9. Streamlit deployment.
+
+Penjelasan detail setiap notebook tersedia di:
+
+[docs/notebook_workflow.md](docs/notebook_workflow.md)
+
+Streamlit tidak mengulang:
+
+- rename dataset,
+- konversi polygon ke bbox,
+- split dataset,
+- training YOLO,
+- batch evaluation terhadap ground truth.
+
+## Dataset dan Privasi
+
+Dataset penuh tidak disertakan di repository agar repo tetap ringan dan untuk menjaga privasi. Repository hanya menyertakan beberapa sample image dan screenshot untuk demo/dokumentasi.
+
+Gambar plat kendaraan dapat mengandung data sensitif. Hindari menyimpan, menyebarkan, atau mempublikasikan gambar kendaraan/plat tanpa izin. Folder `outputs/` masuk `.gitignore` agar hasil upload dan inference user tidak ikut ter-commit.
+
+## Deployment Streamlit Cloud
+
+Repository sudah disiapkan untuk Streamlit Community Cloud:
+
+- `runtime.txt` mengunci Python 3.12.
+- `packages.txt` menyediakan dependency sistem untuk OpenCV.
+- `requirements.txt` memasang dependency dasar dan dependency ML/OCR pada Python yang kompatibel.
+- App memberi warning jika runtime tidak memuat PaddleOCR atau Ultralytics.
+
+Jika Streamlit Cloud tetap memakai Python terlalu baru dan inference gagal, buka:
 
 ```text
-assets/sample_images/
+Manage app -> Settings -> Python version -> 3.12 -> Reboot/Redeploy
 ```
 
-Jangan menyalin seluruh dataset train/valid/test ke repo jika ingin repo tetap ringan.
+Jika muncul error OpenCV seperti `libGL.so.1` atau `libgthread-2.0.so.0`, pastikan `packages.txt` masih berisi:
 
-Folder `assets/screenshots/` berisi screenshot dashboard atau visualisasi hasil dari notebook Pipeline A/B. Screenshot ini hanya untuk dokumentasi README/laporan, bukan untuk proses inference.
+```text
+libgomp1
+libgl1
+libglib2.0-0t64
+```
 
-Jika repo akan dibuat public, pertimbangkan untuk menyamarkan sebagian plat pada sample image atau memakai gambar yang memang aman untuk demo.
+## Keterbatasan
 
-## Fitur Dashboard
+- Dataset masih terbatas dan test set kecil.
+- Sistem difokuskan pada plat Lampung dengan prefix `BE`.
+- OCR dapat terganggu oleh blur, sudut ekstrem, pencahayaan buruk, pantulan, atau plat yang terlalu kecil.
+- Pipeline B dapat membaca teks non-plat dari kendaraan, stiker, background, atau tanggal masa berlaku.
+- Pipeline A bergantung pada kualitas deteksi YOLO. Jika bbox terlalu longgar atau gagal, OCR ikut terdampak.
+- Inference belum dioptimasi untuk real-time.
+- Aplikasi ini bukan sistem penegakan hukum dan tidak dirancang untuk penggunaan produksi.
 
-- Upload gambar kendaraan.
-- Pipeline A: YOLOv8 mendeteksi plat, crop/ROI, PaddleOCR, candidate extraction, mapping wilayah.
-- Pipeline B: PaddleOCR langsung dari full image, candidate extraction, mapping wilayah.
-- Compare A vs B.
-- Input manual plat untuk mengecek mapping wilayah.
-- UI berbahasa Indonesia.
-- Detail teknis ditempatkan di `Detail Teknis` agar tampilan utama tetap ramah pengguna.
+## Pengembangan Lanjutan
 
-## Catatan Privasi
+- Menambah variasi dataset kendaraan, sudut kamera, cahaya, dan jarak.
+- Fine-tuning OCR atau text recognizer khusus plat Indonesia.
+- Optimasi inference agar lebih cepat di CPU.
+- Menambahkan mode kamera/video real-time.
+- Menyimpan riwayat inference secara opsional dengan kontrol privasi.
+- Menambahkan evaluasi interaktif pada sample yang memiliki ground truth.
+- Menyediakan model alternatif yang lebih ringan untuk deployment.
 
-Gambar plat kendaraan mengandung data sensitif. Hindari menyimpan, membagikan, atau mempublikasikan gambar kendaraan/plat tanpa izin. Folder `outputs/` masuk `.gitignore` agar file hasil upload/inference user tidak ikut ter-commit.
+## Author
+
+**M. Hibban Ramadhan**
+
+Teknik Informatika, Universitas Lampung
